@@ -1,4 +1,5 @@
-# code that scraped a website
+# code that scraped a simple website
+
 
  
 import scrapy
