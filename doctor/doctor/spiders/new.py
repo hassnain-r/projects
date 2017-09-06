@@ -77,6 +77,7 @@ class MySpider(scrapy.Spider):
         l.add_xpath('full_name', './/div/h1[@class="header-doctor-name"]/text()')
         l.add_xpath('image_url', './/meta[@name="og:image"]/@content')
         l.add_value('crawled_date', str(datetime.now()))
+	l.add_value('source_url',response.url)
         yield l.load_item()
 
 
