@@ -6,7 +6,7 @@ from scrapy.loader import ItemLoader
 class FashionItems(scrapy.Item):
     output = scrapy.Field()
     skus = scrapy.Field()
-    material&care = scrapy.Field()
+    material_care = scrapy.Field()
 
 
 class FashionSite(scrapy.Spider):
@@ -34,6 +34,8 @@ class FashionSite(scrapy.Spider):
     def parse_data(self, response):
 
         load = ItemLoader(item=FashionItems(), response=response)
+	category = response.xpath('.//a[@class="at-breadcrumb-item"]/span/text()').extract()[1:]
+        load.add_value('category',category)
         url = response.url
         start = url.find('_') + 1
         end = url.find('.', start)
@@ -74,7 +76,7 @@ class FashionSite(scrapy.Spider):
         while i <= n:
             final_list.append(values[i])
             i = i + 3
-        material&care = dict(zip(keys, final_list))
-        load.add_value('material&care', material&care)
+        material_care = dict(zip(keys, final_list))
+        load.add_value('material_care', material_care)
         yield  load.load_item()
 
