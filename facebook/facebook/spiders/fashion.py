@@ -6,7 +6,7 @@ from scrapy.loader import ItemLoader
 class FashionItems(scrapy.Item):
     output = scrapy.Field()
     skus = scrapy.Field()
-    material_care = scrapy.Field()
+    material&care = scrapy.Field()
 
 
 class FashionSite(scrapy.Spider):
@@ -65,8 +65,16 @@ class FashionSite(scrapy.Spider):
             size = size.replace('\n', '')
             size_color = size + '_' + colors[0]
             load.add_value('skus', {size_color:{'available_colors':colors, 'size':size, 'before_price':before_price, 'price':price, 'currency':currency}})
-        material_details = map(unicode.strip, response.xpath('.//div[@class="f-xs-12 f-md-6"]//span[@class="p-details__material__desc"]/text()').extract())
-        inner_things = map(unicode.strip, response.xpath('.//div[@class="f-xs-12 f-md-6"]//td/text()').extract())
-        load.add_value('material_care', {'instructions':material_details, 'fabric_details':inner_things})
+        
+	keys= map(unicode.strip, response.xpath('.//div[@class="f-xs-12 f-md-6"]//span[@class="p-details__material__desc"]/text()').extract())
+        values = map(unicode.strip, response.xpath('.//div[@class="f-xs-12 f-md-6"]//td/text()').extract())
+        final_list = []
+        n = len(values)
+        i = 2
+        while i <= n:
+            final_list.append(values[i])
+            i = i + 3
+        material&care = dict(zip(keys, final_list))
+        load.add_value('material&care', material&care)
         yield  load.load_item()
-print('good_bye')
+
