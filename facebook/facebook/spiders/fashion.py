@@ -69,3 +69,4 @@ class FashionSite(scrapy.Spider):
         inner_things = map(unicode.strip, response.xpath('.//div[@class="f-xs-12 f-md-6"]//td/text()').extract())
         load.add_value('material_care', {'instructions':material_details, 'fabric_details':inner_things})
         yield  load.load_item()
+print('good_bye')
