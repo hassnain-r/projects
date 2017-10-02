@@ -24,6 +24,7 @@ class Dockets(scrapy.Spider):
 
     def parse_pagination(self, response):
         selector = response.xpath('//html/*/form[@id="frmResultList"]')
+        key_list=[]
         key_list = response.meta["key_list"]
         pre_call_data = response.meta["form_data"]
         a = selector.xpath('.//td/a[@id="lnkNextPage"]/@id').extract_first()
@@ -105,10 +106,11 @@ class Dockets(scrapy.Spider):
             'filled_by': response.xpath('//td[@headers="FILED_BY"]/text()').extract_first(),
         }
         data4 = response.xpath('//td[@headers="DOCUMENT_TYPE"]//a/@href').extract()
-        first_link = data4[0]
-        yield scrapy.Request(first_link, method="GET", dont_filter=True, callback=self.parse_ending,
-                             meta={"data4": data4, 'index1': 0})
-
+        try:
+            first_link = data4[0]
+            yield scrapy.Request(first_link, method="GET", dont_filter=True, callback=self.parse_endpage,
+                                 meta={"data4": data4, 'index1': 0})
+        except:return 
     def parse_endpage(self, response):
         data4 = response.meta["data4"]
         index1 = response.meta['index1'] + 1
