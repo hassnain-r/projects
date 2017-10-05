@@ -16,8 +16,8 @@ class DocketsItem(Item):
     filling_date = Field()
     filled__by = Field()
     title = Field()
-    extenshion = Field()
-    sourse_url = Field()
+    extension = Field()
+    source_url = Field()
 
     # define the fields for your item here like:
     # name = scrapy.Field()
