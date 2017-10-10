@@ -9,14 +9,14 @@ class DarazPakistan(scrapy.Spider):
     list_having_next_pages_urls = []
 
     def parse(self, response):
-        item = DarazItem()
-        list_of_categories = response.xpath('.//ul[@class="menu-items"]//span[@class="nav-subTxt"]/text()').extract()
-        item['All_categories'] = list_of_categories
-        yield item
-        list_having_sub_categories = response.xpath('.//ul[@class="menu-items"]//a/@href').extract()
-        for sub_category in list_having_sub_categories:
-            yield scrapy.FormRequest(url=sub_category, method='GET', meta={'dont_merge_cookies': True},
-                                     dont_filter=True, callback=self.parse_next_pages)
+	item = DarazItem()
+	list_of_categories = response.xpath('.//ul[@class="menu-items"]//span[@class="nav-subTxt"]/text()').extract()
+	item['All_categories'] = list_of_categories
+	yield item
+	list_having_sub_categories = response.xpath('.//ul[@class="menu-items"]//a/@href').extract()
+	for sub_category in list_having_sub_categories:
+	    yield scrapy.FormRequest(url=sub_category, method='GET', meta={'dont_merge_cookies': True},
+		                     dont_filter=True, callback=self.parse_next_pages)
     
     def parse_next_pages(self, response):
         next_page_url = response.xpath('.//a[@title="Next"]/@href').extract_first()
