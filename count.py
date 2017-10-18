@@ -33,7 +33,7 @@ class JsonAnalyzer:
                 final_data = str(field) + ': ' + str(dictionary[field]['type']) + '[' + str(value_in_percentage) + '%' + ']'
                 print (final_data)
 
-    def unique_data(self):
+    def unique_data(self): #function for getting unique values of certain category
 
         parser = argparse.ArgumentParser()
         parser.add_argument('-c', '--category')
