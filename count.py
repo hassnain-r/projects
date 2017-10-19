@@ -33,25 +33,42 @@ class JsonAnalyzer:
                 final_data = str(field) + ': ' + str(dictionary[field]['type']) + '[' + str(value_in_percentage) + '%' + ']'
                 print (final_data)
 
-    def unique_data(self): #function for getting unique values of certain category
+    def unique_data(self):
 
         parser = argparse.ArgumentParser()
         parser.add_argument('-c', '--category')
         args = parser.parse_args()
-        with open(args.category, 'r') as file_:
-            content = json.load(file_)
-            total_rows = len(content)
-            print ('{} = {}'.format('Total_Rows', total_rows))
-            sorted_element = []
-            for element in content:
-                try:
-                    sorted_element.append(sorted(element["speciality"]))
-                except:
-                    pass
-            type_of_field = type(sorted_element[0]).__name__
-            percentage = len(sorted_element) / total_rows * 100
-            category = str(type_of_field) + ':' + '[' + str(percentage) + '%' ']'
-            print (category)
+        result = []
+        with open('config.json', 'r') as json_file:
+            dic = json.load(json_file)
+            for item in dic:
+                dictionary = {}
+                for key in item:
+                    if type(item[key]) is list:
+                        for sub_item in item[key]:
+                            if type(sub_item) is dict:
+                                dictionary[key] = {}
+                                for sub_item_key in sub_item:
+                                    if type(sub_item[sub_item_key]) is list:
+                                        dictionary[key][sub_item_key] = sub_item[sub_item_key][0]
+                                    else:
+                                        dictionary[key][sub_item_key] = sub_item[sub_item_key]
+                            else:
+                                dictionary[key] = sub_item
+                    else:
+                        dictionary[key] = item[key]
+                result.append(dictionary)
+        list_with_values = []
+        for key in result:
+            print key['speciality']['name']
+            list_with_values.append(key['speciality']['name'])
+        type_of_field = type(list_with_values[0]).__name__
+        actual_length = len(sorted(set(list_with_values)))
+        total_length = len(list_with_values)
+        percentage = actual_length / total_length * 100
+        _str = "% unique"
+        print ('{}:[{}{}]'.format(type_of_field, percentage, _str))
+
 
 if __name__ == '__main__':
     s = JsonAnalyzer()
