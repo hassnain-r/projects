@@ -39,7 +39,7 @@ class JsonAnalyzer:
         parser.add_argument('-c', '--category')
         args = parser.parse_args()
         result = []
-        with open('config.json', 'r') as json_file:
+        with open(args.category, 'r') as json_file:
             dic = json.load(json_file)
             for item in dic:
                 dictionary = {}
