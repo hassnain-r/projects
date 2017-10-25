@@ -1,6 +1,5 @@
 from __future__ import division
 import json
-import glob
 import argparse
 
 
@@ -10,78 +9,113 @@ class JsonAnalyzer:
 
     def countdata(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('-f', '--filename')
+        parser.add_argument('-f_n', '--filename')
         args = parser.parse_args()
         with open(args.filename, 'r') as my_file:
             content = json.load(my_file)
             config = len(content)
             string = 'Total_Rows'
             print('{} {}'.format(string, config))
-            dictionary = {}
-            for row in content:
-                for field in row:
-                    if row[field]:
-                        if dictionary.get(field):
-                            dictionary[field]['count'] += 1
-                            dictionary[field]['type'] = type(row[field]).__name__
+
+            def get_recursion(json_items, result=None, parent_key=None):
+
+                if result is None:
+                    result = {}
+                if isinstance(json_items, dict):
+                    for dict_key, dict_value in json_items.items():
+                        if parent_key:
+                            result_key = parent_key + '.' + dict_key
                         else:
-                            dictionary[field] = {}
-                            dictionary[field]['count'] = 1
-                            dictionary[field]['type'] = None
-            for field in dictionary:
-                value_in_percentage = dictionary[field]['count']/config * (100)
-                final_data = str(field) + ': ' + str(dictionary[field]['type']) + '[' + str(value_in_percentage) + '%' + ']'
-                print (final_data)
+                            result_key = dict_key
+                        if result_key not in result:
+                            result[result_key] = {}
+                        if "unique" not in result[result_key]:
+                            result[result_key]["unique"] = []
+                        if "type" not in result[result_key]:
+                            result[result_key]["type"] = ""
+                        if "count" not in result[result_key]:
+                            result[result_key]["count"] = 0
+                        result[result_key]["type"] = type(dict_value).__name__
+                        if isinstance(dict_value, int):
+                            if dict_value != 0:
+                                result[result_key]["count"] += 1
+                        elif len(dict_value) > 0:
+                            result[result_key]["count"] += 1
+                        result = get_recursion(dict_value, result, dict_key)
+                if isinstance(json_items, list):
+                    for value in json_items:
+                        result = get_recursion(value, result, parent_key)
+                return result
+
+            new_data = get_recursion(content)
+            for final_key, final_value in new_data.items():
+                percentage = final_value['count'] / len(content) * 100
+                type_of_element = (final_value['type'])
+                print (final_key + " = " + str(type_of_element) + "[" + str(percentage) + "]")
 
     def unique_data(self):
-
         parser = argparse.ArgumentParser()
-        parser.add_argument('-c', '--category')
+        parser.add_argument('-c', '--single_category')
+        parser.add_argument('-f', '--file_name')
         args = parser.parse_args()
-        result = []
-        with open('config.json', 'r') as json_file:
-            dic = json.load(json_file)
-            for item in dic:
-                dictionary = {}
-                for key in item:
-                    if type(item[key]) is list:
-                        for sub_item in item[key]:
-                            if type(sub_item) is dict:
-                                dictionary[key] = {}
-                                for sub_item_key in sub_item:
-                                    if type(sub_item[sub_item_key]) is list:
-                                        dictionary[key][sub_item_key] = sub_item[sub_item_key][0]
-                                    else:
-                                        dictionary[key][sub_item_key] = sub_item[sub_item_key]
-                            else:
-                                dictionary[key] = sub_item
-                    else:
-                        dictionary[key] = item[key]
-                result.append(dictionary)
-        list_with_values = []
-        for key in result:
-            print key['speciality']['name']
-            list_with_values.append(key['speciality']['name'])
-        type_of_field = type(list_with_values[0]).__name__
-        actual_length = len(sorted(set(list_with_values)))
-        total_length = len(list_with_values)
-        percentage = actual_length / total_length * 100
-        _str = "% unique"
-        print ('{}:[{}{}]'.format(type_of_field, percentage, _str))
+        args.single_category = ''
+        with open(args.file_name, 'r') as my_file:
+            content = json.load(my_file)
+            config = len(content)
+            string = 'Total_Rows'
+            print('{} {}'.format(string, config))
 
+            def get_recursion(json_items, result=None, parent_key=None):
+
+                if result is None:
+                    result = {}
+                if isinstance(json_items, dict):
+                    for dict_key, dict_value in json_items.items():
+                        if parent_key:
+                            result_key = parent_key + '.' + dict_key
+                        else:
+                            result_key = dict_key
+                        if result_key not in result:
+                            result[result_key] = {}
+                        if "unique" not in result[result_key]:
+                            result[result_key]["unique"] = []
+                        if "type" not in result[result_key]:
+                            result[result_key]["type"] = ""
+                        if "count" not in result[result_key]:
+                            result[result_key]["count"] = 0
+                        result[result_key]["type"] = type(dict_value).__name__
+                        if isinstance(dict_value, int):
+                            if dict_value != 0:
+                                result[result_key]["count"] += 1
+                        elif len(dict_value) > 0:
+                            result[result_key]["count"] += 1
+                        if dict_value and dict_value not in result[result_key]["unique"]:
+                            result[result_key]["unique"].append(dict_value)
+                        result = get_recursion(dict_value, result, dict_key)
+
+                if isinstance(json_items, list):
+                    for value in json_items:
+                        result = get_recursion(value, result, parent_key)
+                return result
+
+            new_data = get_recursion(content)
+            for final_key, final_value in new_data.items():
+                if args1.single_category == final_key:
+                    type_of_data = final_value['type']
+                    original_count = len(final_value['unique'])
+                    total_count = (final_value['count'])
+                    percentage = original_count / total_count * 100
+                    print (final_key + " = " + str(type_of_data) + '[' + str(percentage) + '% unique]' + str(final_value['unique']))
 
 if __name__ == '__main__':
     s = JsonAnalyzer()
     parsers = argparse.ArgumentParser()
-    parsers.add_argument('-f', '--filename')
-    parsers.add_argument('-c', '--category')
+    parsers.add_argument('-c', '--single_category')
+    parsers.add_argument('-f', '--file_name')
+    parsers.add_argument('-f_n', '--filename')
     args1 = parsers.parse_args()
-    if args1.filename:
-        print(s.countdata())
-    elif args1.category:
-        print(s.unique_data())
-    else:
-        print 'program ends'
-
-
-
+    if args1.single_category:
+        if args1.file_name:
+            print (s.unique_data())
+    elif args1.filename:
+        print (s.countdata())
