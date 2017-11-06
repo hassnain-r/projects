@@ -11,7 +11,6 @@ class CymodaData(scrapy.Spider):
     start_urls = ["http://www.cyamoda.com/"]
 
     def parse(self, response):
-
         starting_page = response.xpath('.//ul[@class="first"]//a/@href').extract_first()
         starting_page_link = "http://www.cyamoda.com/" + starting_page
         yield scrapy.Request(url=starting_page_link, callback=self.parse_categories_urls)
@@ -23,7 +22,6 @@ class CymodaData(scrapy.Spider):
             yield scrapy.Request(url=each_url, callback=self.parse_sub_cat_urls)
 
     def parse_sub_cat_urls(self, response):
-
         sub_cat_pages = response.xpath('.//a[@class="product-image wow slideInUp"]/@href').extract()
         for each_page in sub_cat_pages:
             yield scrapy.Request(url=each_page, dont_filter=True, callback=self.parse_data)
