@@ -4,6 +4,7 @@ import time
 import json
 import datetime
 from cymoda.items import CymodaItem
+import delay
 
 
 class CymodaData(scrapy.Spider):
@@ -26,6 +27,7 @@ class CymodaData(scrapy.Spider):
         for each_page in sub_cat_pages:
             yield scrapy.Request(url=each_page, dont_filter=True, callback=self.parse_data)
 
+
     def parse_data(self, response):
         item = CymodaItem()
         unicode_content = response.xpath('.//script[@language="javascript"]/text()').extract_first()
@@ -43,18 +45,16 @@ class CymodaData(scrapy.Spider):
         item["lang"] = response.xpath('.//meta[@name="language"]/@content').extract_first()
         item["crawl_start_time"] = time.asctime(time.localtime(time.time()))
         item["date"] = time.time()
-        image_urls_uni_content = response.xpath('.//input[@id="___rc-p-sku-ids"]/@value').extract_first()
-        str_content = image_urls_uni_content.encode('utf8')
-        starting_point = str_content.find("'") + 1
-        ending_point = str_content.find(',', starting_point)
-        images_id = str_content[starting_point:ending_point]
-        image_urls_page = "https://alma.engranedigital.com/web_assets/api/getStock.php?id=" + images_id
-        yield scrapy.Request(url=image_urls_page, meta={'item': item}, callback=self.parse_images_content)
 
+        image_urls_uni_content = response.xpath('.//input[@id="___rc-p-sku-ids"]/@value').extract_first()
         id_led__to_json_content = response.xpath('.//input[@id="___rc-p-id"]/@value').extract_first()
-        json_content_page = "https://alma.engranedigital.com/web_assets/api/getVariations.php?id=" + \
-                            id_led__to_json_content
-        yield scrapy.Request(url=json_content_page, meta={'item': item}, callback=self.parse_skus_content)
+        if image_urls_uni_content:
+            str_content = image_urls_uni_content.encode('utf8')
+            starting_point = str_content.find("'") + 1
+            ending_point = str_content.find(',', starting_point)
+            images_id = str_content[starting_point:ending_point]
+            image_urls_page = "https://alma.engranedigital.com/web_assets/api/getStock.php?id=" + images_id
+            yield scrapy.Request(url=image_urls_page, meta={'item': item, "json_content": id_led__to_json_content}, callback=self.parse_images_content)
 
     def parse_images_content(self, response):
         item = response.meta['item']
@@ -66,7 +66,11 @@ class CymodaData(scrapy.Spider):
             images_urls_list.append(i['ImageUrl'])
         item["image_urls"] = images_urls_list
         item["uuid"] = json_content["CSCIdentification"]
-        yield item
+        id_led__to_json_content = response.meta["json_content"]
+        if id_led__to_json_content:
+            json_content_page = "https://alma.engranedigital.com/web_assets/api/getVariations.php?id=" + \
+                                id_led__to_json_content
+            yield scrapy.Request(url=json_content_page, meta={'item': item}, callback=self.parse_skus_content)
 
     def parse_skus_content(self, response):
         item = response.meta["item"]
@@ -87,3 +91,4 @@ class CymodaData(scrapy.Spider):
                     my_dict[key] = value
             final_list.append(my_dict)
         item["skuss"] = final_list
+        yield item
