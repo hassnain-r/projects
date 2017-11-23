@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import scrapy
 import json
 import time
+import urlparse
 import re
 from gap.items import GapItem
 
@@ -67,12 +68,12 @@ class GapProducts(scrapy.Spider):
 
     def parse_categories_page(self, response):
         item = response.meta["item"]
-        base_url = item["new_base_Url"]
         sub_category_links = response.xpath('.//a[@class="sidebar-navigation--category--link"]/@href').extract()
         for product_page_url in sub_category_links:
             data_contains_id = re.search('(\d+)$', product_page_url)
             final_id = data_contains_id.group()
-            req_country_url = base_url + '/resources/productSearch/v1/search?cid=' + final_id
+            url = '/resources/productSearch/v1/search?cid='+final_id
+            req_country_url = urlparse.urljoin(response.url, url)
             item["refer_url"] = req_country_url
             item["timestamp"] = time.asctime(time.localtime(time.time()))
             yield scrapy.Request(url=req_country_url,
@@ -80,7 +81,6 @@ class GapProducts(scrapy.Spider):
 
     def parse_each_page(self, response):
         item = response.meta["item"]
-        base_url = item["new_base_Url"]
         product_urls = []
         data_having_product_ids = json.loads(response.body)
         p_cid = data_having_product_ids["productCategoryFacetedSearch"]["productCategory"]["businessCatalogItemId"]
@@ -104,7 +104,8 @@ class GapProducts(scrapy.Spider):
                                 p_id = j.get("businessCatalogItemId")
                                 product_urls.append('/browse/product.do?pcid={}&pid={}'.format(p_cid, p_id))
         for url in product_urls:
-            yield scrapy.Request(url=base_url+url, meta={"items": item}, dont_filter=True, callback=self.parse_data)
+            final_url = urlparse.urljoin(response.url, url)
+            yield scrapy.Request(url=final_url, meta={"items": item}, dont_filter=True, callback=self.parse_data)
 
     def get_description(self, response):
         product_details = response.xpath(
@@ -169,9 +170,9 @@ class GapProducts(scrapy.Spider):
     def parse_data(self, response):
         item = response.meta["items"]
         item["url"] = response.url
-        base_url = item["new_base_Url"]
         item["description"] = self.get_description(response)
-        item["image_url"] = base_url+self.get_image_url(response)
+        image_details = self.get_image_url(response)
+        item["image_url"] = urlparse.urljoin(response.url, image_details)
         item["title"] = self.get_title(response)
         item["new_price_text"] = self.get_new_price(response)
         item["old_price_text"] = self.get_old_price(response)
