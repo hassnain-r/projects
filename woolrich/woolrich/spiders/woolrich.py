@@ -36,7 +36,7 @@ class WoolRich(scrapy.Spider):
         item = WoolrichItem()
         item["url_original"] = response.url
         item["url"] = response.url+"?countryCode=PK"
-        item["image_urls"] = self.get_image_url(response)
+        item["image_urls"] = self.get_image_urls(response)
         item["title"] = self.get_title(response)
         item["brand_name"] = self.brand_name(response)
         item["description"] = self.get_description(response)
@@ -60,7 +60,7 @@ class WoolRich(scrapy.Spider):
         item["requests"] = color_requests
         return self.request_or_item(item)
 
-    def get_image_url(self, response):
+    def get_image_urls(self, response):
         images_url = []
         images_data = response.xpath('.//ul[@class="colorlist"]//a//img/@src').extract()
         for image in images_data:
