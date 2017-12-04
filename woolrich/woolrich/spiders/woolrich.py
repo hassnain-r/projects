@@ -7,7 +7,7 @@ from woolrich.items import WoolrichItem
 
 class WoolRich(scrapy.Spider):
     name = "wool_rich_crawler"
-    start_urls = ["http://www.woolrich.com/woolrich/"]
+    start_urls = ["http://www.woolrich.com/woolrich/details/men-s-kodiak-wpb-raincoat/_/R-16185"]
     post_req_url = "http://www.woolrich.com/woolrich/prod/fragments/productDetails.jsp"
     product_urls = []
     skus = {}
