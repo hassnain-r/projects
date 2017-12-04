@@ -7,58 +7,28 @@ from woolrich.items import WoolrichItem
 
 class WoolRich(scrapy.Spider):
     name = "wool_rich_crawler"
-    start_urls = ["http://www.woolrich.com/woolrich/details/men-s-kodiak-wpb-raincoat/_/R-16185"]
+    start_urls = ["http://www.woolrich.com/woolrich/"]
     post_req_url = "http://www.woolrich.com/woolrich/prod/fragments/productDetails.jsp"
     product_urls = []
-    skus = {}
 
     def parse(self, response):
-        first_category = response.xpath('.//div[@class="menu-bar"]//a/@href').extract_first()
-        category_url = urlparse.urljoin(response.url, first_category)
-        yield scrapy.Request(url=category_url, callback=self.parse_next_pages)
+        categories = response.xpath('.//div[@class="menu-bar"]//a/@href').extract()
+        for category in categories:
+            category_url = urlparse.urljoin(response.url, category)
+            yield scrapy.Request(url=category_url, callback=self.parse_next_pages)
 
     def parse_next_pages(self, response):
-        each_page_products = response.xpath('.//h2//a[@title="View Details"]/@href').extract()
-        for product_url in each_page_products:
-            each_product = urlparse.urljoin(response.url, product_url)
-            self.product_urls.append(each_product)
+        products = response.xpath('.//h2//a[@title="View Details"]/@href').extract()
+        for product in products:
+            product_url = urlparse.urljoin(response.url, product)
+            self.product_urls.append(product_url)
         next_page = response.xpath('.//div[@class="clear addMore"]/@nextpage').extract_first()
         if next_page:
             next_page_url = urlparse.urljoin(response.url, next_page)
             yield scrapy.Request(url=next_page_url, callback=self.parse_next_pages)
         else:
-            products = self.product_urls[0:2]
-            for product in products:
-                yield scrapy.Request(url=product, callback=self.parse_product)
-
-    def parse_product(self, response):
-        color_requests = []
-        item = WoolrichItem()
-        item["url_original"] = response.url
-        item["url"] = response.url+"?countryCode=PK"
-        item["image_urls"] = self.get_image_urls(response)
-        item["title"] = self.get_title(response)
-        item["brand_name"] = self.brand_name(response)
-        item["description"] = self.get_description(response)
-        item["care"] = self.get_care(response)
-        item["category"] = self.get_category(response)
-        item["timestamp"] = self.get_time(response)
-        item["Currency"] = self.get_currency(response)
-
-        product_id = response.xpath('.//span[@itemprop="productID"]/text()').extract_first()
-        color_ids = response.xpath('.//ul[@class="colorlist"]//a//img/@colorid').extract()
-        color_names = response.xpath('.//ul[@class="colorlist"]//a/@title').extract()
-        for c_id, name in zip(color_ids, color_names):
-            form_data = {
-                'productId': product_id,
-                'colorId': c_id,
-                'colorDisplayName': name,
-            }
-            request = scrapy.FormRequest(url=self.post_req_url, formdata=form_data, meta={'form_data': form_data, "item": item},
-                                         dont_filter=True, callback=self.parse_color)
-            color_requests.append(request)
-        item["requests"] = color_requests
-        return self.request_or_item(item)
+            for url in self.product_urls:
+                yield scrapy.Request(url=url, dont_filter=True, callback=self.parse_product)
 
     def get_image_urls(self, response):
         images_url = []
@@ -91,6 +61,34 @@ class WoolRich(scrapy.Spider):
 
     def currency(self, response):
         return "PKR"
+
+    def parse_product(self, response):
+        color_requests = []
+        item = WoolrichItem()
+        item["url_original"] = response.url
+        item["url"] = response.url+"?countryCode=PK"
+        item["image_urls"] = self.get_image_urls(response)
+        item["title"] = self.get_title(response)
+        item["brand_name"] = self.brand_name(response)
+        item["description"] = self.get_description(response)
+        item["care"] = self.get_care(response)
+        item["category"] = self.get_category(response)
+        item["timestamp"] = self.get_time(response)
+        item["Currency"] = self.currency(response)
+        product_id = response.xpath('.//span[@itemprop="productID"]/text()').extract_first()
+        color_ids = response.xpath('.//ul[@class="colorlist"]//a//img/@colorid').extract()
+        color_names = response.xpath('.//ul[@class="colorlist"]//a/@title').extract()
+        for c_id, name in zip(color_ids, color_names):
+            form_data = {
+                'productId': product_id,
+                'colorId': c_id,
+                'colorDisplayName': name,
+            }
+            request = scrapy.FormRequest(url=self.post_req_url, formdata=form_data, meta={'form_data': form_data, "item": item},
+                                         dont_filter=True, callback=self.parse_color)
+            color_requests.append(request)
+        item["requests"] = color_requests
+        return self.request_or_item(item)
 
     def parse_color(self, response):
         size_requests = []
@@ -146,36 +144,43 @@ class WoolRich(scrapy.Spider):
         currency = response.xpath('.//span[@itemprop="priceCurrency"]/text()').extract_first()
         return currency
 
-    def get_sku(self, response):
-        sku_id = response.css('.sizelist .selected ::attr("id")').extract_first()
-        self.skus[sku_id] = {}
-        self.skus[sku_id]["size"] = self.get_size(response)
-        self.skus[sku_id]["color"] = self.get_color(response)
-        self.skus[sku_id]["price"] = self.get_price(response)
-        self.skus[sku_id]["currency"] = self.get_currency(response)
-        old_price = response.xpath(
-            './/span[@class="price_reg strikethrough"]/text()').extract_first()
+    def get_old_price(self, response):
+        old_price = response.xpath('.//span[@class="price_reg strikethrough"]/text()').extract_first()
         if old_price:
-            self.skus[sku_id]["old_price"] = old_price.split()
-        return self.skus
+            return old_price.split()
+
+    def get_sku(self, response):
+        item = response.meta["item"]
+        skus = item.setdefault('skus', {})
+        sku_id = response.css('.sizelist .selected ::attr("id")').extract_first()
+        skus[sku_id] = {}
+        skus[sku_id]["size"] = self.get_size(response)
+        skus[sku_id]["color"] = self.get_color(response)
+        skus[sku_id]["price"] = self.get_price(response)
+        skus[sku_id]["currency"] = self.get_currency(response)
+        skus[sku_id]["old_price"] = self.get_old_price(response)
+        return skus
 
     def parse_dimension_data(self, response):
         item = response.meta["item"]
         dim_sku_id = response.css('.dimensionslist .selected ::attr("id")').extract_first()
-        self.skus[dim_sku_id] = {}
-        self.skus[dim_sku_id]["color"] = self.get_color(response)
-        self.skus[dim_sku_id]["price"] = self.get_price(response)
-        self.skus[dim_sku_id]["currency"] = self.get_currency(response)
-        old_price = response.xpath('.//span[@class="price_reg strikethrough"]/text()').extract_first()
-        if old_price:
-            self.skus[dim_sku_id]["old_price"] = old_price.split()
+        skus = item.setdefault('skus', {})
+        skus[dim_sku_id] = {}
+        skus[dim_sku_id]["color"] = self.get_color(response)
+        skus[dim_sku_id]["price"] = self.get_price(response)
+        skus[dim_sku_id]["currency"] = self.get_currency(response)
+        skus[dim_sku_id]["old_price"] = self.get_old_price(response)
         dimension = response.css('.dimensionslist .selected ::text').extract_first()
         size = self.get_size(response)
-        self.skus[dim_sku_id]["size"] = size + "/" + dimension
-        item["skus"] = self.skus
-        return self.request_or_item(item)
+        split_dimension = dimension.split()
+        if isinstance(split_dimension, list):
+            product_dim = ''.join(split_dimension)
+            skus[dim_sku_id]["size"] = size + "/" + product_dim
+            return self.request_or_item(item)
 
     def request_or_item(self, item):
         if item["requests"]:
             return item["requests"].pop()
-        del item['requests']
+        else:
+            del item['requests']
+            return item
